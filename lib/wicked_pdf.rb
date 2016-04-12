@@ -77,9 +77,12 @@ class WickedPdf
 
     print_command(command.inspect) if in_development_mode?
 
-    err = Open3.popen3(*command) do |_stdin, _stdout, stderr|
-      stderr.read
-    end
+    system *command
+
+    # err = Open3.popen3(*command) do |_stdin, _stdout, stderr|
+    #   stderr.read
+    # end
+
     if options[:return_file]
       return_file = options.delete(:return_file)
       return generated_pdf_file
@@ -87,7 +90,7 @@ class WickedPdf
     generated_pdf_file.rewind
     generated_pdf_file.binmode
     pdf = generated_pdf_file.read
-    fail "PDF could not be generated!\n Command Error: #{err}" if pdf && pdf.rstrip.empty?
+    fail "PDF could not be generated!\n" if pdf && pdf.rstrip.empty?
     pdf
   rescue => e
     raise "Failed to execute:\n#{command}\nError: #{e}"

@@ -17,7 +17,7 @@ end
 
 desc 'Run RuboCop'
 task :rubocop do
-  return unless RUBY_VERSION > '1.9.2'
+  next unless RUBY_VERSION >= '2.0.0'
   require 'rubocop/rake_task'
   RuboCop::RakeTask.new
 end
@@ -34,9 +34,9 @@ desc 'Generate dummy application for test cases'
 task :dummy_generate do
   Rake::Task[:dummy_remove].invoke
   puts 'Creating dummy application to run tests'
-  prefix = (Rails::VERSION::MAJOR == 2) ? '' : 'new '
-  system("rails #{prefix}test/dummy")
-  system("touch #{prefix}test/dummy/db/schema.rb")
+  command = Rails::VERSION::MAJOR == 2 ? '' : 'new'
+  system("rails #{command} test/dummy")
+  system('touch test/dummy/db/schema.rb')
   FileUtils.rm_r Dir.glob('test/dummy/test/*')
 end
 

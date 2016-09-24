@@ -61,7 +61,7 @@ class WickedPdfTest < ActiveSupport::TestCase
     begin
       tmp = Tempfile.new('wkhtmltopdf')
       fp = tmp.path
-      File.chmod 0000, fp
+      File.chmod 0o000, fp
       assert_raise RuntimeError do
         WickedPdf.new fp
       end
@@ -74,7 +74,7 @@ class WickedPdfTest < ActiveSupport::TestCase
     begin
       tmp = Tempfile.new('wkhtmltopdf')
       fp = tmp.path
-      File.chmod 0777, fp
+      File.chmod 0o777, fp
       wp = WickedPdf.new fp
       assert_raise RuntimeError do
         wp.pdf_from_string HTML_DOCUMENT
@@ -143,7 +143,7 @@ class WickedPdfTest < ActiveSupport::TestCase
     pathname = Rails.root.join('app', 'views', 'pdf', 'file.html')
     assert_equal "#{cover_option} http://example.org", @wp.get_parsed_options(:cover => 'http://example.org').strip, 'URL'
     assert_equal "#{cover_option} #{pathname}", @wp.get_parsed_options(:cover => pathname).strip, 'Pathname'
-    assert_match %r(#{cover_option} .+wicked_cover_pdf.+\.html), @wp.get_parsed_options(:cover => '<html><body>HELLO</body></html>').strip, 'HTML'
+    assert_match %r{#{cover_option} .+wicked_cover_pdf.+\.html}, @wp.get_parsed_options(:cover => '<html><body>HELLO</body></html>').strip, 'HTML'
   end
 
   test 'should parse other options' do

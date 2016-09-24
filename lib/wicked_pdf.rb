@@ -59,8 +59,6 @@ class WickedPdf
 
     pdf = pdf_from_html_file(string_file.path, options)
     pdf
-  rescue => e
-    raise "Error: #{e}"
   ensure
     string_file.close! if string_file
   end
@@ -110,13 +108,13 @@ class WickedPdf
   end
 
   def print_command(cmd)
-    p '*' * 15 + cmd + '*' * 15
+    Rails.logger.debug '*' * 15 + cmd + '*' * 15
   end
 
   def retrieve_binary_version
     _stdin, stdout, _stderr = Open3.popen3(@exe_path + ' -V')
     @binary_version = parse_version(stdout.gets(nil))
-  rescue StandardError
+  rescue
     DEFAULT_BINARY_VERSION
   end
 
@@ -167,7 +165,11 @@ class WickedPdf
       parts = value.to_s.split(' ')
       ["--#{name.tr('_', '-')}", *parts]
     elsif type == :boolean
-      ["--#{name.tr('_', '-')}"]
+      if value
+        ["--#{name.tr('_', '-')}"]
+      else
+        []
+      end
     else
       ["--#{name.tr('_', '-')}", value.to_s]
     end
@@ -322,8 +324,8 @@ class WickedPdf
                                   :print_media_type,
                                   :disable_smart_shrinking,
                                   :use_xserver,
-                                  :no_background], '', :boolean)
-      r += make_options(options, [:no_stop_slow_scripts], '', nil)
+                                  :no_background,
+                                  :no_stop_slow_scripts], '', :boolean)
     end
     r
   end

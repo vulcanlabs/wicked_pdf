@@ -4,7 +4,7 @@
 
 Wicked PDF uses the shell utility [wkhtmltopdf](http://wkhtmltopdf.org) to serve a PDF file to a user from HTML.  In other words, rather than dealing with a PDF generation DSL of some sort, you simply write an HTML view as you would normally, then let Wicked PDF take care of the hard stuff.
 
-_Wicked PDF has been verified to work on Ruby versions 1.8.7 through 2.1; Rails 2 through 4.1_
+_Wicked PDF has been verified to work on Ruby versions 1.8.7 through 2.3; Rails 2 through 5.0_
 
 ### Installation
 
@@ -35,7 +35,7 @@ gem 'wkhtmltopdf-binary'
 
 To your Gemfile and run `bundle install`.
 
-This wrapper may trail in versions, at the moment it wraps the 0.9 version of `wkhtmltopdf` while there is 0.12 version available. Some of the advanced options listed below is not available with 0.9.
+This wrapper may trail in versions, at the moment it wraps the 0.9 version of `wkhtmltopdf` while there is 0.12 version available. Some of the advanced options listed below are not available with 0.9.
 
 If your wkhtmltopdf executable is not on your webserver's path, you can configure it in an initializer:
 
@@ -62,7 +62,7 @@ end
 ```
 ### Usage Conditions - Important!
 
-The wkhtmltopdf binary is run outside of your Rails application; therefore, your normal layouts will not work. If you plan to use any CSS, Javascript, or image files, you must modify your layout so that you provide an absolute reference to these files. The best option for Rails without the asset pipeline is to use the `wicked_pdf_stylesheet_link_tag`, `wicked_pdf_image_tag`, and `wicked_pdf_javascript_include_tag` helpers or to go straight to a CDN (Content Delivery Network) for popular libraries such as jQuery.
+The wkhtmltopdf binary is run outside of your Rails application; therefore, your normal layouts will not work. If you plan to use any CSS, JavaScript, or image files, you must modify your layout so that you provide an absolute reference to these files. The best option for Rails without the asset pipeline is to use the `wicked_pdf_stylesheet_link_tag`, `wicked_pdf_image_tag`, and `wicked_pdf_javascript_include_tag` helpers or to go straight to a CDN (Content Delivery Network) for popular libraries such as jQuery.
 
 #### wicked_pdf helpers
 ```html
@@ -83,6 +83,29 @@ The wkhtmltopdf binary is run outside of your Rails application; therefore, your
   </body>
 </html>
 ```
+
+Using wicked_pdf_helpers with asset pipeline raises `Asset names passed to helpers should not include the "/assets/" prefix.` error. To work around this, you can use `wicked_pdf_asset_base64` with the normal Rails helpers, but be aware that this will base64 encode your content and inline it in the page. This is very quick for small assets, but large ones can take a long time.
+
+```html
+<!doctype html>
+<html>
+  <head>
+    <meta charset='utf-8' />
+    <%= stylesheet_link_tag wicked_pdf_asset_base64("pdf") %>
+    <%= javascript_include_tag wicked_pdf_asset_base64("number_pages") %>
+
+  </head>
+  <body onload='number_pages'>
+    <div id="header">
+      <%= image_tag wicked_pdf_asset_base64('mysite.jpg') %>
+    </div>
+    <div id="content">
+      <%= yield %>
+    </div>
+  </body>
+</html>
+```
+
 #### CDN reference
 
 In this case, you can use that standard Rails helpers and point to the current CDN for whichever framework you are using. For jQuery, it would look somethng like this, given the current versions at the time of this writing.
@@ -108,9 +131,9 @@ class ThingsController < ApplicationController
       format.pdf do
         render pdf:                            'file_name',
                disposition:                    'attachment',                 # default 'inline'
-               template:                       'things/show.pdf.erb',
+               template:                       'things/show',
                file:                           "#{Rails.root}/files/foo.erb"
-               layout:                         'pdf.html',                   # use 'pdf.html' for a pdf.html.erb file
+               layout:                         'pdf',                        # for a pdf.html.erb file
                wkhtmltopdf:                    '/usr/local/bin/wkhtmltopdf', # path to binary
                show_as_html:                   params.key?('debug'),         # allow debugging based on url param
                orientation:                    'Landscape',                  # default Portrait
@@ -158,8 +181,8 @@ class ThingsController < ApplicationController
                             bottom:            SIZE,
                             left:              SIZE,
                             right:             SIZE },
-               header:  {   html: {            template: 'users/header.pdf.erb',  # use :template OR :url
-                                               layout:   'pdf_plain.html',        # optional, use 'pdf_plain.html' for a pdf_plain.html.erb file, defaults to main layout
+               header:  {   html: {            template: 'users/header',          # use :template OR :url
+                                               layout:   'pdf_plain',             # optional, use 'pdf_plain' for a pdf_plain.html.pdf.erb file, defaults to main layout
                                                url:      'www.example.com',
                                                locals:   { foo: @bar }},
                             center:            'TEXT',
@@ -170,8 +193,8 @@ class ThingsController < ApplicationController
                             spacing:           REAL,
                             line:              true,
                             content:           'HTML CONTENT ALREADY RENDERED'}, # optionally you can pass plain html already rendered (useful if using pdf_from_string)
-               footer:  {   html: {   template:'shared/footer.pdf.erb', # use :template OR :url
-                                      layout:  'pdf_plain.html',        # optional, use 'pdf_plain.html' for a pdf_plain.html.erb file, defaults to main layout
+               footer:  {   html: {   template:'shared/footer',         # use :template OR :url
+                                      layout:  'pdf_plain.html',        # optional, use 'pdf_plain' for a pdf_plain.html.pdf.erb file, defaults to main layout
                                       url:     'www.example.com',
                                       locals:  { foo: @bar }},
                             center:            'TEXT',
@@ -215,6 +238,19 @@ end
 ```
 By default, it will render without a layout (layout: false) and the template for the current controller and action.
 
+#### wkhtmltopdf Binary Options
+
+Some of the options above are being passed to `wkhtmltopdf` binary. They can be used to control the options used in Webkit rendering before generating the PDF.
+
+Examples of those options are:
+
+```ruby
+print_media_type: true        # Passes `--print-media-type`
+no_background: true           # Passes `--no-background`
+```
+
+You can see the complete list of options under "Global Options" in wkhtmltopdf usage [docs](http://wkhtmltopdf.org/usage/wkhtmltopdf.txt).
+
 ### Super Advanced Usage ###
 
 If you need to just create a pdf and not display it:
@@ -231,14 +267,14 @@ pdf = WickedPdf.new.pdf_from_url('https://github.com/mileszs/wicked_pdf')
 
 # create a pdf from string using templates, layouts and content option for header or footer
 pdf = WickedPdf.new.pdf_from_string(
-  render_to_string('templates/pdf.html.erb', layout: 'pdfs/layout_pdf'),
+  render_to_string('templates/pdf', layout: 'pdfs/layout_pdf'),
   footer: {
     content: render_to_string(layout: 'pdfs/layout_pdf')
   }
 )
 
 # or from your controller, using views & templates and all wicked_pdf options as normal
-pdf = render_to_string pdf: "some_file_name", template: "templates/pdf.html.erb", encoding: "UTF-8"
+pdf = render_to_string pdf: "some_file_name", template: "templates/pdf", encoding: "UTF-8"
 
 # then save to a file
 save_path = Rails.root.join('pdfs','filename.pdf')
@@ -250,6 +286,18 @@ If you need to display utf encoded characters, add this to your pdf views or lay
 ```html
 <meta charset="utf-8" />
 ```
+
+### Page Breaks
+
+You can control page breaks with CSS.
+
+Add a few styles like this to your stylesheet or page:
+```css
+div.alwaysbreak { page-break-before: always; }
+div.nobreak:before { clear:both; }
+div.nobreak { page-break-inside: avoid; }
+```
+
 ### Page Numbering
 
 A bit of javascript can help you number your pages. Create a template or header/footer file with this:
@@ -302,9 +350,13 @@ If you use the standard `render pdf: 'some_pdf'` in your app, you will want to e
 
 ### Further Reading
 
+Mike Ackerman's post [How To Create PDFs in Rails](https://www.viget.com/articles/how-to-create-pdfs-in-rails)
+
 Andreas Happe's post [Generating PDFs from Ruby on Rails](http://www.snikt.net/blog/2012/04/26/wicked-pdf/)
 
 JESii's post [WickedPDF, wkhtmltopdf, and Heroku...a tricky combination](http://www.nubyrubyrailstales.com/2013/06/wickedpdf-wkhtmltopdf-and-herokua.html)
+
+Berislav Babic's post [Send PDF attachments from Rails with WickedPdf and ActionMailer](http://berislavbabic.com/send-pdf-attachments-from-rails-with-wickedpdf-and-actionmailer/)
 
 StackOverflow [questions with the tag "wicked-pdf"](http://stackoverflow.com/questions/tagged/wicked-pdf)
 

@@ -2,11 +2,29 @@ require 'test_helper'
 require 'action_view/test_case'
 
 class WickedPdfHelperAssetsTest < ActionView::TestCase
-  include WickedPdfHelper::Assets
+  include WickedPdf::WickedPdfHelper::Assets
 
   if Rails::VERSION::MAJOR > 3 || (Rails::VERSION::MAJOR == 3 && Rails::VERSION::MINOR > 0)
     test 'wicked_pdf_asset_base64 returns a base64 encoded asset' do
-      assert_match %r(data:text\/css;base64,.+), wicked_pdf_asset_base64('wicked.css')
+      assert_match %r{data:text\/css;base64,.+}, wicked_pdf_asset_base64('wicked.css')
+    end
+
+    test 'wicked_pdf_stylesheet_link_tag should inline the stylesheets passed in' do
+      Rails.configuration.assets.expects(:compile => true)
+      assert_equal "<style type='text/css'>/* Wicked styles */\n\n</style>",
+                   wicked_pdf_stylesheet_link_tag('wicked')
+    end
+
+    test 'wicked_pdf_image_tag should return the same as image_tag when passed a full path' do
+      Rails.configuration.assets.expects(:compile => true)
+      assert_equal image_tag("file:///#{Rails.root.join('public', 'pdf')}"),
+                   wicked_pdf_image_tag('pdf')
+    end
+
+    test 'wicked_pdf_javascript_include_tag should inline the javascripts passed in' do
+      Rails.configuration.assets.expects(:compile => true)
+      assert_equal "<script type='text/javascript'>// Wicked js\n;\n</script>",
+                   wicked_pdf_javascript_include_tag('wicked')
     end
 
     test 'wicked_pdf_asset_path should return a url when assets are served by an asset server' do
@@ -86,13 +104,13 @@ class WickedPdfHelperAssetsTest < ActionView::TestCase
     end
 
     test 'WickedPdfHelper::Assets::ASSET_URL_REGEX should match various URL data type formats' do
-      assert_match WickedPdfHelper::Assets::ASSET_URL_REGEX, 'url(\'/asset/stylesheets/application.css\');'
-      assert_match WickedPdfHelper::Assets::ASSET_URL_REGEX, 'url("/asset/stylesheets/application.css");'
-      assert_match WickedPdfHelper::Assets::ASSET_URL_REGEX, 'url(/asset/stylesheets/application.css);'
-      assert_match WickedPdfHelper::Assets::ASSET_URL_REGEX, 'url(\'http://assets.domain.com/dummy.png\');'
-      assert_match WickedPdfHelper::Assets::ASSET_URL_REGEX, 'url("http://assets.domain.com/dummy.png");'
-      assert_match WickedPdfHelper::Assets::ASSET_URL_REGEX, 'url(http://assets.domain.com/dummy.png);'
-      assert_no_match WickedPdfHelper::Assets::ASSET_URL_REGEX, '.url { \'http://assets.domain.com/dummy.png\' }'
+      assert_match WickedPdf::WickedPdfHelper::Assets::ASSET_URL_REGEX, 'url(\'/asset/stylesheets/application.css\');'
+      assert_match WickedPdf::WickedPdfHelper::Assets::ASSET_URL_REGEX, 'url("/asset/stylesheets/application.css");'
+      assert_match WickedPdf::WickedPdfHelper::Assets::ASSET_URL_REGEX, 'url(/asset/stylesheets/application.css);'
+      assert_match WickedPdf::WickedPdfHelper::Assets::ASSET_URL_REGEX, 'url(\'http://assets.domain.com/dummy.png\');'
+      assert_match WickedPdf::WickedPdfHelper::Assets::ASSET_URL_REGEX, 'url("http://assets.domain.com/dummy.png");'
+      assert_match WickedPdf::WickedPdfHelper::Assets::ASSET_URL_REGEX, 'url(http://assets.domain.com/dummy.png);'
+      assert_no_match WickedPdf::WickedPdfHelper::Assets::ASSET_URL_REGEX, '.url { \'http://assets.domain.com/dummy.png\' }'
     end
 
     test 'prepend_protocol should properly set the protocol when the asset is precompiled' do
